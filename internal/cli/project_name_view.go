@@ -1,6 +1,7 @@
 package cli
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/charmbracelet/bubbles/textinput"
@@ -8,20 +9,35 @@ import (
 )
 
 type ProjectNameView struct {
-	textinput.Model
+	inputModel    textinput.Model
+	endingMessage string
 }
 
 func NewProjectNameView() *ProjectNameView {
+	inputModel := newTextInput("Project Name")
+	return &ProjectNameView{
+		inputModel:    inputModel,
+		endingMessage: "",
+	}
+}
+
+func newTextInput(prompt string) textinput.Model {
 	ti := textinput.New()
-	ti.Placeholder = "Project Name"
+	ti.Placeholder = prompt
 	ti.Focus()
 	ti.CharLimit = 156
 	ti.Width = 20
-	return &ProjectNameView{Model: ti}
+	return ti
 }
 
 func (v *ProjectNameView) View() string {
-	return "Enter Project Name: \n" + v.Model.View()
+	endingDisplay := func() string {
+		if len(v.endingMessage) > 0 {
+			return fmt.Sprintf("\n\nNice, the project name \"%v\" is well received.\n\n", v.inputModel.Value())
+		}
+		return ""
+	}()
+	return "Please input a project name: \n\n" + v.inputModel.View() + endingDisplay
 }
 
 func (v *ProjectNameView) Update(msg tea.Msg, m *Model) tea.Cmd {
@@ -32,10 +48,10 @@ func (v *ProjectNameView) Update(msg tea.Msg, m *Model) tea.Cmd {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyEnter:
+			v.endingMessage = v.inputModel.Value()
 			m.CurrentViewIndex++
 		}
 	}
-
-	v.Model, cmd = v.Model.Update(msg)
+	v.inputModel, cmd = v.inputModel.Update(msg)
 	return cmd
 }

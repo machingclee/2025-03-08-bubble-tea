@@ -3,6 +3,7 @@ package cli
 import (
 	"log"
 	"math"
+	"project_generator/internal/projgenerator"
 	"project_generator/internal/termstyle"
 	"strings"
 	"time"
@@ -11,16 +12,18 @@ import (
 )
 
 type MultiChoiceView struct {
-	Prompt   string
-	Options  []string
-	Selected int
+	Prompt          string
+	Options         []string
+	Selected        int
+	AppConfigurator func(int) projgenerator.AppConfig
 }
 
-func NewMultiChoiceView(prompt string, options []string) *MultiChoiceView {
+func NewMultiChoiceView(prompt string, options []string, appConfigurator func(int) projgenerator.AppConfig) *MultiChoiceView {
 	return &MultiChoiceView{
-		Prompt:   prompt,
-		Options:  options,
-		Selected: 0,
+		Prompt:          prompt,
+		Options:         options,
+		Selected:        0,
+		AppConfigurator: appConfigurator,
 	}
 }
 
@@ -28,13 +31,13 @@ func (v *MultiChoiceView) View() string {
 	log.Println("MultiChoiceView.View()")
 	var builder strings.Builder
 	builder.WriteString(v.Prompt + "\n\n")
+
 	for index, option := range v.Options {
 		checkbox := Checkbox(option, index == v.Selected)
 		builder.WriteString(checkbox + "\n")
 	}
 
-	instructions := termstyle.Subtle("enter:choose") +
-		termstyle.Dot + termstyle.Subtle("esc or ctrl-c: quit")
+	instructions := termstyle.Subtle("enter:choose") + termstyle.Dot + termstyle.Subtle("esc or ctrl-c: quit")
 	builder.WriteString("\n" + instructions)
 
 	return builder.String()
@@ -66,4 +69,11 @@ func createProject() tea.Cmd {
 	return tea.Tick(time.Second/60, func(time.Time) tea.Msg {
 		return createProjectMsg{}
 	})
+}
+
+func (v *MultiChoiceView) ToAppConfig() projgenerator.AppConfig {
+	if v.AppConfigurator != nil {
+		return v.AppConfigurator(v.Selected)
+	}
+	return projgenerator.AppConfig{}
 }
